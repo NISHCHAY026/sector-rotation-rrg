@@ -40,7 +40,7 @@ BENCH = "SPY"
 # familiar ~95-105 RRG range instead of a cramped ~98-102.
 SCALE = 1.6
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parent
 
 
 def _zscore(s: pd.Series, w: int) -> pd.Series:

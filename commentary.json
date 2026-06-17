@@ -1,0 +1,38 @@
+{
+  "asof": "2026-06-17",
+  "today_remarks": "Leadership is broadening out of megacap Tech and into cyclicals plus defensives. XLK has the highest relative strength but momentum is rolling over (-2.79% today) as the post-FOMC tape repriced to higher-for-longer: the Fed held at 3.50-3.75% under new Chair Warsh, but the SEP turned hawkish with 9 of 18 dots now showing a 2026 hike. That hits long-duration Tech and rewards rate/cycle beneficiaries: Financials (XLF +1.47% today, leading the RRG with the best 1-month excess flow at +4.85% vs SPY), Industrials, Materials, and Health Care are leading, with Real Estate, Utilities and Staples also firming as a defensive bid. Energy and Comm Services are the flow laggards (-8.37% and -4.75% excess). Note the leadership shift is being read against quad-witching distortions (Thu 6/18) — treat signals into the print as noisy.",
+  "next_week": "The rotation CONFIRMS if Financials/Industrials/cyclicals hold leadership through quarterly quad-witching (Thu 6/18, pulled forward from the Juneteenth holiday Fri 6/19) and into next week's catalysts: the Fed's 2026 bank stress test (DFAST) results Wed 6/24 4pm ET for XLF, FedEx fiscal Q4 Tue 6/23 after the close as the Industrials freight bellwether, plus New Home Sales Wed 6/24 and the May PCE inflation print Thu 6/25 for rate-sensitive XLRE/XLU. The thesis INVALIDATES if Tech momentum re-accelerates — watch Micron's fiscal Q3 print Wed 6/24 after close: a strong AI/HBM read could re-fire XLK leadership and pull flows back into megacap, while a hot PCE that pushes the hike trade harder would whipsaw the rate-sensitive defensive names that have been catching the rotation bid.",
+  "catalysts": [
+    { "date": "Thu 6/18", "event": "Quarterly triple/quadruple witching (moved up from 6/19 for Juneteenth); also jobless claims + Philly Fed survey", "why": "Mechanical gamma/positioning unwind can fake rotation signals; treat leadership reads into the print as suspect." },
+    { "date": "Fri 6/19", "event": "Juneteenth holiday — US equity, bond and options markets CLOSED", "why": "Three-day weekend creates gap risk into the 6/22 open; trading resumes Mon 6/22." },
+    { "date": "Tue 6/23", "event": "FedEx (FDX) fiscal Q4 after the close", "why": "Global-freight/economic-activity bellwether — key confirm/deny for Industrials (XLI) leadership." },
+    { "date": "Wed 6/24", "event": "Fed 2026 bank stress test (DFAST) results, 4pm ET (32 banks)", "why": "Direct XLF catalyst, though muted: results won't change capital requirements until 2027." },
+    { "date": "Wed 6/24", "event": "Micron (MU) fiscal Q3 after the close; New Home Sales (May)", "why": "MU is the AI/HBM-memory read-through for XLK semis (rotation-invalidation risk); New Home Sales feeds XLRE." },
+    { "date": "Thu 6/25", "event": "May PCE / Personal Income & Outlays, 8:30am ET", "why": "Next inflation input post-FOMC; a hot print hardens the hike trade and whipsaws rate-sensitive XLRE/XLU." }
+  ],
+  "buy_ideas": [
+    { "ticker": "XLF", "sector": "Financials", "rationale": "RRG leader with the best 1-month excess flow (+4.85% vs SPY) and the higher-for-longer rate regime supports wider NIM; barely positive YTD (-0.26%) so not over-extended, with the 6/24 stress test as a clean catalyst.", "risk": "Stress-test results won't change capital rules until 2027 so the catalyst can underwhelm; a credit/yield-curve scare or dovish repricing would unwind the bank trade fast." },
+    { "ticker": "XLI", "sector": "Industrials", "rationale": "Leading on the RRG with strong flow (+3.42% excess) and broad-cyclical tailwind; FedEx (6/23) is a direct confirm catalyst. Up 16% YTD so participation is real but not the most stretched.", "risk": "Tariff-cliff headline risk (Section 122 surcharge expires 7/24) and a weak FedEx print could puncture the freight/activity read." },
+    { "ticker": "XLV", "sector": "Health Care", "rationale": "Leading with the third-best flow (+3.89% excess) yet flat YTD (-0.8%) — the cheapest, least-extended leg of the rotation, carrying both a cyclical-broadening and defensive bid; no heavyweight catalyst risk next week.", "risk": "Lack of a near-term scheduled catalyst means it can drift; policy/PDUFA headlines and rate moves can swing the group." }
+  ],
+  "watch": [
+    { "ticker": "XLB", "sector": "Materials", "note": "Leading with solid flow (+3.3% excess) but up 16.8% YTD and no dated next-week catalyst — keys off the post-FOMC dollar/rates path (gold/copper); wait for a flow confirm." },
+    { "ticker": "XLRE", "sector": "Real Estate", "note": "Leading on the RRG with positive flow (+2.82%) but rate-sensitive — needs a cooler PCE (6/25) and benign New Home Sales (6/24) to confirm; a hawkish surprise reverses it." },
+    { "ticker": "XLU", "sector": "Utilities", "note": "Leading as a defensive/rate-sensitive bid but flow is thin (+1.2% excess) and YTD only +6.3%; confirm depends on yields easing post-PCE rather than the hike trade hardening." }
+  ],
+  "avoid": [
+    { "ticker": "XLE", "sector": "Energy", "reason": "Worst flow laggard (-8.37% excess vs SPY) despite a 24.6% YTD; only improving-early on the RRG and dominated by binary Iran/Strait-of-Hormuz oil headlines with weekend gap risk — not a clean rotation entry." },
+    { "ticker": "XLC", "sector": "Communication Services", "reason": "Second-worst flow (-4.75% excess) and worst YTD (-4.28%); only improving-early, not yet confirmed leadership." },
+    { "ticker": "XLY", "sector": "Consumer Discretionary", "reason": "Outright lagging on the RRG with near-zero flow (+0.15%) and flat YTD (-0.6%); higher-for-longer rates and tariff overhang weigh on the consumer." },
+    { "ticker": "XLK", "sector": "Information Technology", "reason": "Highest relative strength but momentum is rolling over (-2.79% today) as higher-for-longer hits long-duration leaders; up 29.7% YTD and most exposed to a crowded-megacap unwind — wait for momentum to re-base." }
+  ],
+  "risks": [
+    "Higher-for-longer regime flip: the hawkish SEP (9/18 dots show a 2026 hike) can keep punishing long-duration Tech AND whipsaw the rate-sensitive XLRE/XLU defensives now catching the rotation bid.",
+    "Quad-witching Thu 6/18 (pulled forward for Juneteenth) plus the three-day-weekend gap into the 6/22 open create mechanical volatility that can fake or reverse rotation signals.",
+    "Crowded megacap/AI unwind: Tech is still ~34% of the index, so a strong Micron (6/24) AI/HBM print could re-fire XLK and reverse the broadening, while a miss could trigger a concentration-driven selloff that drags the tape.",
+    "Hot May PCE (6/25) hardens the hike trade, pressuring everything rate-sensitive and the cyclical-rotation thesis.",
+    "Energy/oil tail risk: an Iran/Strait-of-Hormuz flare-up could spike crude, reinforce the hawkish hold, and reshuffle Energy vs duration over a weekend."
+  ],
+  "bottom_line": "Money is broadening out of rolling-over megacap Tech into Financials, Industrials and Health Care on a higher-for-longer Fed — buy the under-extended leaders (XLF, XLI, XLV) and respect that quad-witching, Micron and PCE can flip the script fast.",
+  "disclaimer": "Data-driven educational analysis of public RRG/money-flow signals and verified calendar events, not personalized financial advice. Technical rotation signals can be invalidated quickly by FOMC fallout, the May PCE print, single-name earnings (Micron, FedEx) or binary oil/tariff headlines; quad-witching and the Juneteenth closure add mechanical distortion. Do your own research."
+}
