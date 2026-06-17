@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S&P 500 sector rotation — where money is moving</title>
+<style>
+:root{--color-background-primary:#fff;--color-background-secondary:#f5f4ef;--color-background-tertiary:#faf9f5;--color-text-primary:#1a1915;--color-text-secondary:#5f5e5a;--color-border-tertiary:rgba(60,60,55,.15);--color-border-secondary:rgba(60,60,55,.3)}
+@media (prefers-color-scheme:dark){:root{--color-background-primary:#262624;--color-background-secondary:#32312e;--color-background-tertiary:#1f1e1c;--color-text-primary:#f0efea;--color-text-secondary:#b4b2a9;--color-border-tertiary:rgba(220,220,210,.15);--color-border-secondary:rgba(220,220,210,.3)}}
+body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:820px;margin:1.5rem auto;padding:0 1rem;background:var(--color-background-tertiary);color:var(--color-text-primary)}
+button{font:inherit;font-size:13px;color:var(--color-text-primary);background:transparent;border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:5px 14px;cursor:pointer}
+input[type=range]{accent-color:#888780}
+h1{font-size:21px;font-weight:500;margin:0 0 4px}
+h2{font-size:15px;font-weight:500;margin:26px 0 8px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:12px}
+.seg{display:inline-flex;border:0.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden}
+.seg button{border:none;border-radius:0}
+.seg button+button{border-left:0.5px solid var(--color-border-secondary)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.live{width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;animation:pulse 1.6s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+  <div>
+    <h1>S&amp;P 500 sector rotation</h1>
+    <p id="sub" style="font-size:13px;color:var(--color-text-secondary);margin:0"></p>
+  </div>
+  <div id="badge" style="font-size:12px;color:var(--color-text-secondary);white-space:nowrap;padding-top:4px"></div>
+</div>
+
+<!-- ===== MONEY MAP: the simplified "where is money moving" answer ===== -->
+<h2>Money map — where the money is moving</h2>
+<p id="headline" style="font-size:14px;line-height:1.5;margin:0 0 12px"></p>
+<div style="display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:13px">
+  <span style="color:var(--color-text-secondary)">Relative to S&amp;P 500 over</span>
+  <span class="seg">
+    <button data-ex="ex1w">1 week</button>
+    <button data-ex="ex1m">1 month</button>
+    <button data-ex="ex3m">3 months</button>
+  </span>
+</div>
+<div id="money" class="card" style="padding:12px 14px"></div>
+
+<!-- ===== RRG: the rotation graph (IBKR-style) ===== -->
+<h2>Relative rotation graph</h2>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 10px;font-size:13px">
+  <span class="seg">
+    <button id="tfW">Weekly</button>
+    <button id="tfD">Daily</button>
+  </span>
+  <label for="tail" style="color:var(--color-text-secondary)">Tail</label>
+  <input type="range" id="tail" min="3" max="20" step="1" value="8" style="width:100px">
+  <span id="tailOut" style="font-weight:500;min-width:18px">8</span>
+  <button id="play">Play</button>
+  <span style="color:var(--color-text-secondary)">date</span>
+  <span id="dateOut" style="font-weight:500"></span>
+</div>
+<input type="range" id="scrub" min="2" max="25" step="1" value="25" style="width:100%;margin:0 0 12px">
+<div id="wrap" class="card" style="position:relative;padding:8px 4px 2px">
+  <svg id="rrg" viewBox="0 0 680 520" width="100%" role="img" aria-label="Relative rotation graph of sector ETFs versus SPY"></svg>
+  <div id="tip" style="display:none;position:absolute;z-index:5;max-width:210px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;pointer-events:none;line-height:1.45"></div>
+</div>
+<div id="chips" style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0"></div>
+
+<!-- ===== Detail table ===== -->
+<h2>Detail</h2>
+<table id="tbl" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px">
+  <colgroup><col style="width:150px"><col style="width:54px"><col style="width:44px"><col style="width:50px"><col style="width:50px"><col style="width:50px"><col style="width:50px"><col style="width:50px"><col style="width:84px"><col style="width:26px"></colgroup>
+  <thead><tr id="hdr" style="color:var(--color-text-secondary);font-size:11px"></tr></thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<!-- ===== Remarks & advice ===== -->
+<h2>Remarks &amp; advice — what's a good buy</h2>
+<div id="signals" class="card" style="padding:12px 14px;margin:0 0 12px"></div>
+<div id="note"></div>
+
+<p style="font-size:12px;color:var(--color-text-secondary);margin-top:14px">
+  <b>Live:</b> <code>py -3.11 serve_rrg.py</code> (auto-updates in browser) &nbsp;·&nbsp;
+  <b>Snapshot:</b> <code>py -3.11 generate_rrg.py</code> then open <code>rrg_live.html</code>.
+</p>
+
+<script>
+const LIVE=false;
+let DATA={"asof": "2026-06-16", "generated": "2026-06-17 00:26:06", "benchmark": "SPY", "weekly": {"dates": ["2025-12-26", "2026-01-02", "2026-01-09", "2026-01-16", "2026-01-23", "2026-01-30", "2026-02-06", "2026-02-13", "2026-02-20", "2026-02-27", "2026-03-06", "2026-03-13", "2026-03-20", "2026-03-27", "2026-04-03", "2026-04-10", "2026-04-17", "2026-04-24", "2026-05-01", "2026-05-08", "2026-05-15", "2026-05-22", "2026-05-29", "2026-06-05", "2026-06-12", "2026-06-19"], "series": {"XLY": {"ratio": [100.66, 100.22, 101.03, 101.29, 101.68, 101.24, 99.81, 98.49, 97.73, 97.51, 97.58, 97.52, 97.43, 97.58, 97.66, 97.88, 98.43, 98.58, 98.37, 97.97, 97.22, 97.09, 97.21, 97.13, 97.32, 97.65], "mom": [102.59, 102.38, 102.17, 101.79, 101.28, 100.5, 99.56, 98.22, 97.51, 97.34, 97.61, 98.23, 98.97, 99.71, 100.31, 100.8, 101.39, 101.74, 101.68, 101.35, 100.68, 99.83, 99.1, 98.63, 98.86, 99.9]}, "XLC": {"ratio": [99.83, 100.29, 100.5, 99.55, 99.55, 100.84, 100.14, 99.17, 98.9, 99.99, 101.63, 102.15, 102.17, 101.22, 100.65, 99.58, 98.75, 97.59, 97.14, 96.91, 96.93, 97.04, 97.18, 97.32, 97.47, 97.63], "mom": [101.97, 102.09, 101.91, 101.29, 100.77, 100.7, 100.01, 98.82, 98.47, 99.0, 99.52, 100.63, 101.68, 101.77, 100.84, 99.04, 97.98, 97.49, 97.64, 97.93, 98.45, 99.04, 99.75, 100.37, 100.96, 101.46]}, "XLK": {"ratio": [99.16, 98.98, 98.8, 98.74, 98.71, 98.12, 96.93, 96.7, 96.85, 96.97, 97.35, 97.99, 98.75, 98.95, 99.37, 100.28, 102.08, 103.16, 103.35, 103.51, 103.36, 103.12, 103.02, 102.68, 102.4, 102.14], "mom": [98.66, 99.24, 99.69, 100.32, 101.03, 101.1, 100.3, 99.87, 99.78, 99.78, 100.74, 102.39, 103.05, 102.95, 102.72, 102.56, 102.58, 102.43, 102.17, 101.83, 101.19, 99.8, 98.41, 97.74, 97.55, 97.65]}, "XLF": {"ratio": [101.36, 101.94, 102.06, 101.42, 100.03, 98.99, 98.8, 98.03, 97.66, 97.4, 97.46, 97.45, 97.78, 98.17, 98.53, 98.62, 98.42, 97.8, 97.32, 96.81, 96.7, 96.96, 97.14, 97.72, 98.42, 99.12], "mom": [102.55, 102.45, 102.18, 101.23, 99.43, 97.94, 97.38, 97.25, 97.5, 98.04, 98.66, 99.1, 99.72, 100.42, 101.23, 101.74, 101.8, 101.35, 100.68, 99.8, 99.05, 98.84, 99.2, 100.05, 101.13, 101.89]}, "XLV": {"ratio": [101.57, 101.41, 101.22, 100.9, 100.87, 100.16, 100.28, 101.74, 102.03, 102.93, 102.26, 101.17, 99.63, 99.1, 98.57, 97.46, 96.72, 96.41, 96.55, 96.71, 97.03, 97.5, 97.83, 98.39, 98.93, 99.25], "mom": [97.42, 97.43, 97.78, 98.13, 98.5, 98.54, 98.83, 100.23, 101.39, 102.37, 102.58, 101.9, 99.97, 98.75, 97.89, 97.62, 97.78, 98.3, 98.81, 99.33, 100.11, 101.01, 101.77, 102.19, 102.27, 102.1]}, "XLI": {"ratio": [99.64, 101.02, 102.29, 103.3, 103.32, 103.06, 103.24, 103.3, 103.17, 102.94, 102.5, 101.94, 101.45, 101.16, 100.86, 100.75, 100.04, 98.71, 97.72, 97.19, 97.0, 97.03, 97.16, 97.68, 98.25, 98.85], "mom": [102.12, 103.11, 103.46, 103.16, 102.53, 101.84, 100.95, 99.97, 98.99, 98.39, 98.11, 97.89, 97.82, 97.93, 98.11, 98.39, 98.54, 98.28, 97.81, 97.56, 97.6, 98.23, 99.86, 101.63, 102.56, 102.86]}, "XLP": {"ratio": [98.79, 98.66, 98.66, 100.81, 102.37, 102.96, 103.5, 103.66, 103.27, 102.98, 102.5, 102.08, 101.56, 101.38, 100.98, 100.15, 98.71, 97.69, 97.39, 97.32, 97.47, 97.66, 97.65, 97.88, 98.33, 98.64], "mom": [100.22, 98.42, 97.92, 100.69, 102.42, 103.01, 103.09, 102.84, 101.55, 100.14, 99.11, 98.43, 98.05, 98.03, 98.09, 98.18, 98.13, 98.14, 98.21, 98.34, 98.91, 100.37, 101.71, 102.35, 102.56, 102.47]}, "XLE": {"ratio": [98.86, 99.42, 100.27, 101.48, 102.66, 103.28, 103.53, 103.52, 103.25, 102.98, 102.79, 102.69, 102.7, 102.86, 102.58, 101.96, 101.01, 100.22, 99.74, 99.0, 98.74, 98.64, 98.31, 98.36, 98.5, 98.37], "mom": [99.6, 99.23, 99.3, 99.76, 100.7, 101.58, 101.7, 101.39, 100.69, 99.85, 99.24, 98.86, 98.63, 98.65, 98.67, 98.6, 98.41, 98.15, 97.85, 97.56, 97.7, 98.38, 99.08, 99.85, 100.85, 101.43]}, "XLU": {"ratio": [97.33, 97.65, 97.7, 98.0, 98.16, 98.45, 98.81, 100.64, 102.05, 102.85, 102.98, 102.93, 102.52, 102.41, 102.2, 101.8, 100.92, 99.93, 98.91, 97.8, 97.24, 97.29, 97.39, 97.68, 97.99, 98.26], "mom": [98.02, 98.29, 98.86, 99.78, 100.78, 101.65, 101.98, 102.51, 102.72, 102.66, 102.37, 101.98, 101.02, 99.86, 98.8, 98.18, 97.82, 97.7, 97.65, 97.67, 97.83, 98.23, 98.8, 99.7, 100.96, 101.9]}, "XLB": {"ratio": [100.75, 101.69, 102.62, 103.02, 103.22, 102.98, 102.98, 103.11, 102.93, 102.73, 102.2, 101.71, 101.07, 101.1, 101.25, 101.31, 100.58, 99.42, 98.12, 97.42, 97.04, 96.96, 97.15, 97.55, 98.11, 98.61], "mom": [102.36, 102.46, 102.67, 102.49, 101.98, 100.93, 99.63, 98.51, 97.83, 97.57, 97.57, 97.63, 97.64, 97.89, 98.25, 98.76, 98.98, 98.8, 97.82, 97.15, 97.0, 97.52, 98.73, 100.43, 101.68, 102.31]}, "XLRE": {"ratio": [97.46, 97.73, 97.8, 98.77, 99.33, 99.71, 100.43, 102.11, 102.79, 102.96, 102.8, 102.52, 101.99, 101.67, 101.53, 101.31, 100.97, 100.09, 98.73, 97.5, 96.79, 96.94, 97.01, 97.63, 98.37, 98.75], "mom": [99.06, 98.62, 99.52, 101.93, 102.96, 103.14, 103.08, 103.31, 102.91, 102.35, 101.72, 100.87, 99.34, 98.23, 97.74, 97.7, 97.85, 97.99, 97.95, 97.82, 97.79, 98.02, 98.54, 99.91, 101.53, 102.37]}}, "window": 12}, "daily": {"dates": ["2026-04-21", "2026-04-22", "2026-04-23", "2026-04-24", "2026-04-27", "2026-04-28", "2026-04-29", "2026-04-30", "2026-05-01", "2026-05-04", "2026-05-05", "2026-05-06", "2026-05-07", "2026-05-08", "2026-05-11", "2026-05-12", "2026-05-13", "2026-05-14", "2026-05-15", "2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21", "2026-05-22", "2026-05-26", "2026-05-27", "2026-05-28", "2026-05-29", "2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04", "2026-06-05", "2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-15", "2026-06-16"], "series": {"XLY": {"ratio": [101.43, 101.48, 101.21, 100.85, 100.29, 99.66, 99.09, 98.7, 98.46, 98.25, 98.01, 97.83, 97.77, 97.69, 97.54, 97.34, 97.2, 97.07, 96.98, 96.95, 96.94, 97.09, 97.33, 97.6, 97.82, 98.19, 98.58, 98.82, 98.68, 98.34, 97.98, 97.71, 97.59, 97.59, 97.72, 97.85, 98.09, 98.33, 98.54, 98.82], "mom": [102.74, 103.07, 103.05, 102.78, 102.28, 101.56, 100.67, 99.82, 99.04, 98.43, 98.0, 97.78, 97.75, 97.83, 97.98, 98.19, 98.42, 98.64, 98.84, 99.03, 99.24, 99.48, 99.76, 100.12, 100.59, 101.21, 101.84, 102.28, 102.45, 102.37, 102.15, 101.84, 101.48, 101.11, 100.78, 100.41, 100.05, 99.75, 99.69, 99.94]}, "XLC": {"ratio": [97.75, 97.5, 97.28, 96.81, 96.5, 96.44, 96.49, 96.62, 96.79, 96.96, 97.04, 97.11, 97.22, 97.28, 97.23, 97.22, 97.28, 97.35, 97.45, 97.63, 97.8, 97.9, 97.95, 97.89, 97.76, 97.71, 97.69, 97.62, 97.52, 97.28, 97.04, 96.92, 97.01, 97.13, 97.31, 97.63, 97.91, 98.08, 98.08, 98.09], "mom": [102.17, 102.07, 101.91, 101.65, 101.37, 101.14, 100.97, 100.75, 100.59, 100.49, 100.49, 100.68, 101.11, 101.92, 102.57, 102.84, 102.87, 102.73, 102.51, 102.32, 102.21, 102.1, 101.93, 101.7, 101.46, 101.22, 100.98, 100.66, 100.22, 99.45, 98.47, 97.69, 97.33, 97.34, 97.67, 98.22, 98.86, 99.51, 100.05, 100.61]}, "XLK": {"ratio": [103.46, 103.47, 103.34, 103.26, 103.17, 102.98, 102.8, 102.59, 102.45, 102.36, 102.36, 102.45, 102.54, 102.72, 102.92, 102.99, 102.98, 102.94, 102.84, 102.65, 102.43, 102.28, 102.19, 102.15, 102.22, 102.27, 102.33, 102.47, 102.7, 102.93, 103.07, 103.03, 102.7, 102.37, 101.97, 101.53, 101.23, 101.03, 101.03, 100.94], "mom": [101.68, 101.7, 101.61, 101.44, 101.18, 100.86, 100.51, 100.13, 99.77, 99.45, 99.17, 98.95, 98.8, 98.74, 98.76, 98.85, 98.98, 99.14, 99.29, 99.41, 99.47, 99.46, 99.41, 99.28, 99.12, 99.02, 99.06, 99.3, 99.81, 100.55, 101.33, 101.86, 101.91, 101.58, 100.79, 99.74, 98.81, 98.08, 97.6, 97.25]}, "XLF": {"ratio": [98.11, 97.64, 97.26, 96.88, 96.72, 96.79, 96.97, 97.13, 97.22, 97.28, 97.28, 97.22, 97.16, 97.04, 96.95, 96.99, 96.99, 97.01, 97.12, 97.35, 97.58, 97.8, 97.99, 98.17, 98.27, 98.27, 98.18, 98.09, 97.98, 97.86, 97.71, 97.81, 98.43, 99.17, 100.15, 101.22, 101.94, 102.43, 102.56, 102.71], "mom": [97.31, 97.31, 97.37, 97.5, 97.66, 97.89, 98.18, 98.51, 98.91, 99.36, 99.82, 100.31, 100.81, 101.29, 101.65, 101.86, 101.91, 101.86, 101.78, 101.73, 101.7, 101.71, 101.73, 101.79, 101.84, 101.85, 101.82, 101.74, 101.57, 101.18, 100.55, 99.95, 99.92, 100.44, 101.48, 102.54, 103.23, 103.56, 103.61, 103.54]}, "XLV": {"ratio": [96.41, 96.57, 96.77, 96.89, 96.98, 97.11, 97.24, 97.42, 97.57, 97.72, 97.84, 97.89, 97.91, 97.84, 97.74, 97.75, 97.81, 97.86, 97.92, 98.02, 98.28, 98.5, 98.75, 99.08, 99.26, 99.37, 99.59, 99.65, 99.38, 98.79, 98.4, 98.78, 100.36, 101.74, 102.74, 103.31, 103.49, 103.4, 103.02, 102.61], "mom": [98.62, 98.65, 98.83, 99.13, 99.5, 99.88, 100.24, 100.59, 100.87, 101.11, 101.29, 101.4, 101.45, 101.42, 101.33, 101.21, 101.07, 100.91, 100.73, 100.55, 100.42, 100.35, 100.38, 100.71, 101.23, 101.64, 101.98, 102.12, 101.84, 100.94, 99.76, 99.2, 100.15, 101.43, 102.43, 102.97, 103.09, 102.97, 102.75, 102.6]}, "XLI": {"ratio": [97.11, 96.77, 96.88, 96.92, 96.97, 97.02, 97.04, 97.25, 97.41, 97.49, 97.55, 97.72, 97.82, 97.77, 97.74, 97.71, 97.58, 97.43, 97.28, 97.17, 97.08, 97.06, 97.1, 97.19, 97.39, 97.63, 97.79, 97.86, 97.83, 97.87, 98.01, 98.29, 98.8, 99.35, 100.11, 100.62, 101.25, 101.82, 102.19, 102.54], "mom": [99.05, 98.38, 97.8, 97.37, 97.17, 97.21, 97.52, 98.08, 98.7, 99.24, 99.69, 100.1, 100.38, 100.57, 100.72, 100.87, 100.99, 101.02, 100.97, 100.89, 100.77, 100.64, 100.5, 100.42, 100.37, 100.37, 100.45, 100.62, 100.81, 101.04, 101.34, 101.73, 102.26, 102.74, 103.13, 103.28, 103.36, 103.39, 103.35, 103.25]}, "XLP": {"ratio": [96.73, 96.94, 97.24, 97.51, 97.68, 97.88, 98.06, 98.26, 98.44, 98.58, 98.67, 98.66, 98.6, 98.45, 98.09, 97.8, 97.56, 97.36, 97.39, 97.81, 98.53, 98.98, 99.02, 98.85, 98.28, 97.9, 97.59, 97.16, 96.74, 96.48, 96.47, 96.55, 97.01, 97.53, 98.15, 99.05, 99.78, 100.35, 100.59, 100.72], "mom": [98.45, 98.72, 99.1, 99.54, 100.0, 100.45, 100.86, 101.19, 101.42, 101.56, 101.62, 101.6, 101.49, 101.3, 101.04, 100.72, 100.37, 99.99, 99.62, 99.39, 99.37, 99.48, 99.54, 99.55, 99.44, 99.35, 99.27, 99.15, 98.88, 98.41, 97.83, 97.39, 97.39, 97.79, 98.79, 100.17, 101.39, 102.29, 102.82, 103.06]}, "XLE": {"ratio": [97.28, 97.4, 97.58, 97.76, 97.93, 98.13, 98.39, 98.66, 98.88, 99.11, 99.32, 99.27, 98.99, 98.52, 98.16, 97.93, 97.8, 97.76, 98.1, 98.75, 99.63, 100.13, 100.3, 100.32, 99.97, 99.39, 98.8, 98.25, 97.92, 97.81, 97.95, 98.17, 98.48, 98.89, 99.15, 99.6, 99.74, 99.75, 99.27, 98.73], "mom": [97.63, 98.04, 98.54, 99.12, 99.78, 100.49, 101.21, 101.82, 102.26, 102.53, 102.63, 102.57, 102.36, 102.05, 101.7, 101.35, 101.01, 100.67, 100.43, 100.33, 100.39, 100.57, 100.82, 101.18, 101.39, 101.33, 101.0, 100.49, 99.81, 99.06, 98.34, 97.87, 97.72, 97.86, 98.25, 98.98, 99.76, 100.47, 100.83, 100.85]}, "XLU": {"ratio": [96.57, 96.56, 96.76, 97.01, 97.25, 97.51, 97.71, 97.94, 98.12, 98.28, 98.38, 98.31, 98.13, 97.85, 97.6, 97.43, 97.24, 97.11, 97.01, 96.99, 97.12, 97.29, 97.52, 97.78, 98.0, 98.17, 98.22, 98.2, 97.99, 97.83, 97.73, 97.66, 97.88, 98.05, 98.33, 98.82, 99.21, 99.59, 99.77, 100.02], "mom": [96.9, 97.29, 97.74, 98.23, 98.82, 99.49, 100.18, 100.8, 101.29, 101.64, 101.87, 101.97, 101.93, 101.79, 101.59, 101.36, 101.1, 100.83, 100.55, 100.28, 100.05, 99.9, 99.84, 99.92, 100.11, 100.37, 100.61, 100.81, 100.88, 100.87, 100.77, 100.63, 100.57, 100.52, 100.55, 100.77, 101.09, 101.48, 101.87, 102.26]}, "XLB": {"ratio": [98.93, 98.48, 98.1, 97.81, 97.62, 97.53, 97.46, 97.45, 97.45, 97.43, 97.48, 97.59, 97.63, 97.62, 97.67, 97.74, 97.77, 97.68, 97.47, 97.29, 97.09, 96.99, 97.0, 97.08, 97.26, 97.49, 97.71, 97.88, 97.97, 98.1, 98.32, 98.54, 98.8, 98.93, 99.19, 99.42, 99.89, 100.75, 101.56, 102.3], "mom": [98.08, 97.78, 97.62, 97.58, 97.63, 97.76, 97.97, 98.22, 98.51, 98.8, 99.12, 99.48, 99.89, 100.32, 100.78, 101.25, 101.63, 101.84, 101.86, 101.78, 101.6, 101.38, 101.18, 101.04, 100.96, 100.93, 100.97, 101.13, 101.43, 101.88, 102.47, 102.98, 103.26, 103.28, 103.18, 102.99, 102.88, 102.98, 103.15, 103.26]}, "XLRE": {"ratio": [99.36, 98.63, 98.2, 97.65, 97.07, 96.96, 96.97, 97.18, 97.38, 97.55, 97.6, 97.61, 97.57, 97.42, 97.31, 97.29, 97.16, 96.93, 96.75, 96.77, 96.99, 97.28, 97.59, 97.85, 98.04, 98.17, 98.17, 98.0, 97.63, 97.34, 97.21, 97.34, 97.92, 98.47, 99.29, 100.37, 101.16, 101.73, 101.8, 101.74], "mom": [100.53, 100.09, 99.66, 99.21, 98.78, 98.5, 98.41, 98.47, 98.57, 98.63, 98.74, 99.0, 99.3, 99.66, 100.12, 100.56, 100.88, 100.98, 100.92, 100.84, 100.88, 101.04, 101.26, 101.52, 101.76, 101.94, 102.08, 102.16, 102.08, 101.79, 101.34, 100.85, 100.71, 100.85, 101.43, 102.3, 102.98, 103.4, 103.56, 103.54]}}, "window": 21}, "stats": {"XLY": {"name": "Consumer Discretionary", "price": 118.46, "d1": -0.09, "w1": 2.24, "m1": 1.66, "m3": 4.88, "ytd": -0.6, "ex1w": 0.43, "ex1m": 0.15, "ex3m": -7.29, "surge": 0.88, "vol": 7753390}, "XLC": {"name": "Communication Services", "price": 112.19, "d1": 0.0, "w1": 0.64, "m1": -3.35, "m3": -2.45, "ytd": -4.39, "ex1w": -1.16, "ex1m": -4.86, "ex3m": -14.61, "surge": 1.15, "vol": 6032726}, "XLK": {"name": "Information Technology", "price": 186.44, "d1": -2.79, "w1": 3.14, "m1": 5.78, "m3": 33.78, "ytd": 29.66, "ex1w": 1.33, "ex1m": 4.27, "ex3m": 21.61, "surge": 1.29, "vol": 15135930}, "XLF": {"name": "Financials", "price": 54.35, "d1": 1.47, "w1": 3.6, "m1": 6.36, "m3": 10.23, "ytd": -0.26, "ex1w": 1.8, "ex1m": 4.85, "ex3m": -1.93, "surge": 1.06, "vol": 38420305}, "XLV": {"name": "Health Care", "price": 152.94, "d1": 0.03, "w1": -1.05, "m1": 5.4, "m3": 2.63, "ytd": -0.8, "ex1w": -2.86, "ex1m": 3.89, "ex3m": -9.54, "surge": 0.96, "vol": 10986360}, "XLI": {"name": "Industrials", "price": 179.85, "d1": 0.65, "w1": 2.42, "m1": 4.93, "m3": 8.32, "ytd": 16.27, "ex1w": 0.62, "ex1m": 3.42, "ex3m": -3.84, "surge": 1.06, "vol": 8297925}, "XLP": {"name": "Consumer Staples", "price": 85.59, "d1": 0.13, "w1": 1.77, "m1": 1.12, "m3": 1.62, "ytd": 10.8, "ex1w": -0.03, "ex1m": -0.39, "ex3m": -10.54, "surge": 0.96, "vol": 12561760}, "XLE": {"name": "Energy", "price": 55.36, "d1": -0.34, "w1": -3.54, "m1": -6.86, "m3": -4.77, "ytd": 24.63, "ex1w": -5.34, "ex1m": -8.37, "ex3m": -16.93, "surge": 0.86, "vol": 39641445}, "XLU": {"name": "Utilities", "price": 45.06, "d1": 0.72, "w1": 2.46, "m1": 2.71, "m3": -3.72, "ytd": 6.29, "ex1w": 0.65, "ex1m": 1.2, "ex3m": -15.89, "surge": 0.83, "vol": 19895180}, "XLB": {"name": "Materials", "price": 52.72, "d1": 0.42, "w1": 3.84, "m1": 4.81, "m3": 6.94, "ytd": 16.77, "ex1w": 2.04, "ex1m": 3.3, "ex3m": -5.23, "surge": 1.03, "vol": 12665685}, "XLRE": {"name": "Real Estate", "price": 45.1, "d1": 0.24, "w1": 0.29, "m1": 4.33, "m3": 6.28, "ytd": 12.52, "ex1w": -1.51, "ex1m": 2.82, "ex3m": -5.88, "surge": 0.83, "vol": 4798505}, "SPY": {"name": "S&P 500 Benchmark", "price": 750.33, "d1": -0.6, "w1": 1.8, "m1": 1.51, "m3": 12.16, "ytd": 10.33, "ex1w": 0.0, "ex1m": 0.0, "ex3m": 0.0, "surge": 1.14, "vol": 55173075}}};
+const ORDER=["XLK","XLY","XLC","XLF","XLV","XLI","XLP","XLE","XLU","XLB","XLRE"];
+const dark=matchMedia('(prefers-color-scheme: dark)').matches;
+const QC=dark?{Leading:'#97C459',Improving:'#85B7EB',Weakening:'#FAC775',Lagging:'#F09595'}:{Leading:'#639922',Improving:'#185FA5',Weakening:'#BA7517',Lagging:'#E24B4A'};
+const POS=dark?'#5DCAA5':'#0F6E56',NEG=dark?'#F09595':'#A32D2D',GRAY=dark?'#B4B2A9':'#5F5E5A',GRID='#888780';
+const ARR=['→','↗','↑','↖','←','↙','↓','↘'];
+let tf='weekly',tail=8,end=DATA.weekly.dates.length-1,hidden=new Set(),playing=false,timer=null,sort={key:null,dir:1},exKey='ex1m';
+const $=id=>document.getElementById(id);
+const SD=()=>DATA[tf];
+const quad=(r,m)=>r>=100?(m>=100?'Leading':'Weakening'):(m>=100?'Improving':'Lagging');
+const cur=t=>({r:SD().series[t].ratio[end],m:SD().series[t].mom[end]});
+const sign=v=>(v==null||v!==v)?'—':((v>0?'+':'')+v.toFixed(1)+'%');
+// Current snapshot from the latest DAILY point — the most up-to-date read of
+// where money is rotating (independent of the RRG scrubber, which defaults weekly).
+const nowQuad=t=>{const s=DATA.daily.series[t],i=s.ratio.length-1;return quad(s.ratio[i],s.mom[i]);};
+const nowRatio=t=>{const s=DATA.daily.series[t];return s.ratio[s.ratio.length-1];};
+
+function setSub(){
+  $('sub').textContent='Benchmark SPY · data as of '+DATA.asof+' close';
+  const b=$('badge');
+  if(LIVE){b.innerHTML='<span class="live"></span> Live · refreshed '+(DATA.generated||'').slice(11,19);}
+  else{b.textContent='Snapshot · '+DATA.asof;}
+}
+
+/* ---------- MONEY MAP ---------- */
+const EXLABEL={ex1w:'1-week',ex1m:'1-month',ex3m:'3-month'};
+function money(){
+  const rows=ORDER.map(t=>({t,name:DATA.stats[t].name,ex:DATA.stats[t][exKey],q:nowQuad(t)}))
+    .sort((a,b)=>b.ex-a.ex);
+  const maxAbs=Math.max(0.5,...rows.map(r=>Math.abs(r.ex)));
+  const bar=r=>{
+    const w=Math.abs(r.ex)/maxAbs*50,pos=r.ex>=0,col=pos?POS:NEG;
+    const fill='position:absolute;top:3px;height:18px;'+(pos?'left:50%;width:'+w+'%;border-radius:0 3px 3px 0':'right:50%;width:'+w+'%;border-radius:3px 0 0 3px')+';background:'+col;
+    const lbl='position:absolute;top:2px;'+(pos?'left:calc(50% + '+w+'% + 6px)':'right:calc(50% + '+w+'% + 6px)')+';font-size:11px;font-weight:500;color:'+col;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0">'
+      +'<div style="width:150px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px">'
+        +'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:'+QC[r.q]+';margin-right:6px"></span>'
+        +'<b style="color:'+QC[r.q]+'">'+r.t+'</b> <span style="color:var(--color-text-secondary)">'+r.name+'</span></div>'
+      +'<div style="position:relative;flex:1;height:24px">'
+        +'<div style="position:absolute;left:50%;top:0;bottom:0;border-left:0.5px solid var(--color-border-secondary)"></div>'
+        +'<div style="'+fill+'"></div><div style="'+lbl+'">'+sign(r.ex)+'</div></div></div>';
+  };
+  $('money').innerHTML='<div style="font-size:11px;color:var(--color-text-secondary);margin:0 0 6px">'
+    +'◀ money leaving (underperforming SPY)&nbsp;&nbsp;|&nbsp;&nbsp;money arriving (outperforming SPY) ▶</div>'
+    +rows.map(bar).join('');
+  headline(rows);
+}
+function headline(rows){
+  const into=rows.filter(r=>r.ex>0&&nowQuad(r.t)!=='Weakening').slice(0,3);
+  const outof=rows.filter(r=>r.ex<0).slice(-3).reverse();
+  const lead=ORDER.filter(t=>nowQuad(t)==='Leading').sort((a,b)=>nowRatio(b)-nowRatio(a)).slice(0,3);
+  const weak=ORDER.filter(t=>nowQuad(t)==='Weakening');
+  const impr=ORDER.filter(t=>nowQuad(t)==='Improving').slice(0,3);
+  const nm=t=>DATA.stats[t].name;
+  const list=a=>a.map(r=>r.t).join(', ')||'none';
+  let s='Over the past '+EXLABEL[exKey]+', money is flowing <b style="color:'+POS+'">into '+list(into)+'</b> '
+    +'and <b style="color:'+NEG+'">out of '+list(outof)+'</b>. ';
+  const bits=[];
+  if(lead.length) bits.push('<b style="color:'+QC.Leading+'">'+lead.map(nm).join(' & ')+'</b> '+(lead.length>1?'lead':'leads'));
+  if(weak.length) bits.push('<b style="color:'+QC.Weakening+'">'+weak.map(nm).join(' & ')+'</b> '+(weak.length>1?'are losing':'is losing')+' leadership');
+  if(impr.length) bits.push('<b style="color:'+QC.Improving+'">'+impr.slice(0,3).map(nm).join(' & ')+'</b> '+(impr.length>1?'are improving':'is improving'));
+  s+='Rotation: '+bits.join('; ')+'.';
+  $('headline').innerHTML=s;
+}
+
+/* ---------- RRG ---------- */
+function render(){
+ const d=SD(),n=d.dates.length;
+ if(end>n-1)end=n-1;
+ let xv=[100],yv=[100];
+ ORDER.forEach(t=>{if(hidden.has(t))return;const se=d.series[t];for(let i=Math.max(0,end-tail);i<=end;i++){xv.push(se.ratio[i]);yv.push(se.mom[i]);}});
+ let xmin=Math.min.apply(null,xv),xmax=Math.max.apply(null,xv),ymin=Math.min.apply(null,yv),ymax=Math.max.apply(null,yv);
+ const px=Math.max(.35,(xmax-xmin)*.09),py=Math.max(.35,(ymax-ymin)*.09);
+ xmin=Math.min(xmin-px,99);xmax=Math.max(xmax+px,101);ymin=Math.min(ymin-py,99);ymax=Math.max(ymax+py,101);
+ const L=46,T=16,W=618,H=460;
+ const X=v=>L+(v-xmin)/(xmax-xmin)*W,Y=v=>T+(ymax-v)/(ymax-ymin)*H;
+ const cx=X(100),cy=Y(100),s0=Math.max(0,end-tail);
+ let g='';
+ g+='<rect x="'+L+'" y="'+T+'" width="'+(cx-L)+'" height="'+(cy-T)+'" fill="rgba(55,138,221,.08)"/>';
+ g+='<rect x="'+cx+'" y="'+T+'" width="'+(L+W-cx)+'" height="'+(cy-T)+'" fill="rgba(99,153,34,.09)"/>';
+ g+='<rect x="'+L+'" y="'+cy+'" width="'+(cx-L)+'" height="'+(T+H-cy)+'" fill="rgba(226,75,74,.08)"/>';
+ g+='<rect x="'+cx+'" y="'+cy+'" width="'+(L+W-cx)+'" height="'+(T+H-cy)+'" fill="rgba(239,159,39,.09)"/>';
+ const stepX=(xmax-xmin)>9?2:1,stepY=(ymax-ymin)>9?2:1;
+ for(let v=Math.ceil(xmin);v<=Math.floor(xmax);v+=stepX){const x=X(v);g+='<line x1="'+x+'" y1="'+T+'" x2="'+x+'" y2="'+(T+H)+'" stroke="'+GRID+'" stroke-opacity=".12"/><text x="'+x+'" y="'+(T+H+15)+'" font-size="10" fill="'+GRID+'" text-anchor="middle">'+v+'</text>';}
+ for(let v=Math.ceil(ymin);v<=Math.floor(ymax);v+=stepY){const y=Y(v);g+='<line x1="'+L+'" y1="'+y+'" x2="'+(L+W)+'" y2="'+y+'" stroke="'+GRID+'" stroke-opacity=".12"/><text x="'+(L-7)+'" y="'+(y+3)+'" font-size="10" fill="'+GRID+'" text-anchor="end">'+v+'</text>';}
+ g+='<line x1="'+cx+'" y1="'+T+'" x2="'+cx+'" y2="'+(T+H)+'" stroke="'+GRID+'" stroke-opacity=".55" stroke-width="1.2"/>';
+ g+='<line x1="'+L+'" y1="'+cy+'" x2="'+(L+W)+'" y2="'+cy+'" stroke="'+GRID+'" stroke-opacity=".55" stroke-width="1.2"/>';
+ g+='<text x="'+(L+10)+'" y="'+(T+18)+'" font-size="12" font-weight="500" fill="'+QC.Improving+'">Improving</text>';
+ g+='<text x="'+(L+W-10)+'" y="'+(T+18)+'" font-size="12" font-weight="500" fill="'+QC.Leading+'" text-anchor="end">Leading</text>';
+ g+='<text x="'+(L+10)+'" y="'+(T+H-10)+'" font-size="12" font-weight="500" fill="'+QC.Lagging+'">Lagging</text>';
+ g+='<text x="'+(L+W-10)+'" y="'+(T+H-10)+'" font-size="12" font-weight="500" fill="'+QC.Weakening+'" text-anchor="end">Weakening</text>';
+ g+='<circle cx="'+cx+'" cy="'+cy+'" r="3.5" fill="'+GRAY+'"/><text x="'+(cx+6)+'" y="'+(cy+13)+'" font-size="10" fill="'+GRAY+'">SPY</text>';
+ ORDER.forEach(t=>{if(hidden.has(t))return;const se=d.series[t];const col=QC[quad(se.ratio[end],se.mom[end])];
+  // smooth tail via quadratic path through the points
+  let pts=[];for(let i=s0;i<=end;i++)pts.push([X(se.ratio[i]),Y(se.mom[i])]);
+  if(pts.length>1){let path='M'+pts[0][0]+' '+pts[0][1];
+   for(let i=1;i<pts.length;i++){const mx=(pts[i-1][0]+pts[i][0])/2,my=(pts[i-1][1]+pts[i][1])/2;path+=' Q'+pts[i-1][0]+' '+pts[i-1][1]+' '+mx+' '+my;}
+   path+=' L'+pts[pts.length-1][0]+' '+pts[pts.length-1][1];
+   g+='<path d="'+path+'" fill="none" stroke="'+col+'" stroke-opacity=".55" stroke-width="1.8"/>';}
+  for(let i=s0;i<end;i++){const o=(.18+.55*((i-s0)/Math.max(1,end-1-s0))).toFixed(2);
+   g+='<circle cx="'+X(se.ratio[i])+'" cy="'+Y(se.mom[i])+'" r="1.6" fill="'+col+'" fill-opacity="'+o+'"/>';}
+  const hx=X(se.ratio[end]),hy=Y(se.mom[end]);
+  g+='<circle cx="'+hx+'" cy="'+hy+'" r="4.5" fill="'+col+'" stroke="'+(dark?'#262624':'#fff')+'" stroke-width="1.4"/>';
+  g+='<text x="'+(hx+7)+'" y="'+(hy-6)+'" font-size="11" font-weight="500" fill="'+col+'">'+t+'</text>';
+  g+='<circle cx="'+hx+'" cy="'+hy+'" r="12" fill="transparent" data-sym="'+t+'" style="cursor:pointer"/>';});
+ g+='<text x="'+(L+W/2)+'" y="'+(T+H+34)+'" text-anchor="middle" font-size="11" fill="'+GRAY+'">RS-Ratio — relative strength vs SPY →</text>';
+ g+='<text transform="rotate(-90)" x="'+(-(T+H/2))+'" y="13" text-anchor="middle" font-size="11" fill="'+GRAY+'">RS-Momentum →</text>';
+ $('rrg').innerHTML=g;
+ $('dateOut').textContent=d.dates[end];
+ const sc=$('scrub');sc.max=n-1;if(+sc.value!==end)sc.value=end;
+ chips();table();
+}
+function chips(){
+ $('chips').innerHTML=ORDER.map(t=>{const c=cur(t),col=QC[quad(c.r,c.m)],off=hidden.has(t);
+  return '<span data-chip="'+t+'" role="button" tabindex="0" style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border:0.5px solid var(--color-border-tertiary);border-radius:999px;font-size:12px;cursor:pointer;user-select:none;opacity:'+(off?'.38':'1')+'"><span style="width:8px;height:8px;border-radius:50%;background:'+col+'"></span>'+t+'</span>';}).join('')
+  +'<span data-chip="__all" role="button" tabindex="0" style="padding:3px 10px;font-size:12px;cursor:pointer;color:var(--color-text-secondary);text-decoration:underline">show all</span>';
+}
+function table(){
+ const d=SD();
+ const cols=[['name','Sector'],['price','Price'],['d1','Day'],['ex1w','1W vs SPY'],['ex1m','1M vs SPY'],['ex3m','3M vs SPY'],['r','RS-R'],['m','RS-M'],['q','Quadrant'],['ang','']];
+ $('hdr').innerHTML=cols.map((c,i)=>'<th data-sort="'+c[0]+'" style="text-align:'+(i?'right':'left')+';padding:6px 4px;font-weight:500;cursor:pointer;user-select:none;border-bottom:0.5px solid var(--color-border-secondary)">'+c[1]+(sort.key===c[0]?(sort.dir>0?' ▴':' ▾'):'')+'</th>').join('');
+ let rows=ORDER.map(t=>{const se=d.series[t],st=DATA.stats[t],r=se.ratio[end],m=se.mom[end];
+  return {t:t,name:st.name,price:st.price,d1:st.d1,ex1w:st.ex1w,ex1m:st.ex1m,ex3m:st.ex3m,r:r,m:m,q:quad(r,m),ang:Math.atan2(m-se.mom[end-1],r-se.ratio[end-1])*180/Math.PI};});
+ if(sort.key)rows.sort((a,b)=>(a[sort.key]>b[sort.key]?1:a[sort.key]<b[sort.key]?-1:0)*sort.dir);
+ const pct=v=>'<td style="text-align:right;padding:5px 4px;color:'+(v>0?POS:v<0?NEG:GRAY)+'">'+sign(v)+'</td>';
+ $('tbody').innerHTML=rows.map(o=>{const col=QC[o.q],ai=Math.round(((o.ang+360)%360)/45)%8,off=hidden.has(o.t);
+  return '<tr style="border-bottom:0.5px solid var(--color-border-tertiary);opacity:'+(off?'.45':'1')+'">'
+  +'<td style="padding:5px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="color:'+col+';font-weight:500">'+o.t+'</span> <span style="color:var(--color-text-secondary);font-size:11px">'+o.name+'</span></td>'
+  +'<td style="text-align:right;padding:5px 4px">'+o.price.toFixed(2)+'</td>'+pct(o.d1)+pct(o.ex1w)+pct(o.ex1m)+pct(o.ex3m)
+  +'<td style="text-align:right;padding:5px 4px;font-weight:500">'+o.r.toFixed(2)+'</td><td style="text-align:right;padding:5px 4px;font-weight:500">'+o.m.toFixed(2)+'</td>'
+  +'<td style="text-align:right;padding:5px 4px"><span style="background:'+col+'26;color:'+col+';font-size:11px;padding:2px 8px;border-radius:999px">'+o.q+'</span></td>'
+  +'<td style="text-align:center;padding:5px 2px;color:'+col+';font-size:14px">'+ARR[ai]+'</td></tr>';}).join('')
+  +(function(){const s=DATA.stats.SPY;
+   return '<tr style="color:var(--color-text-secondary)"><td style="padding:6px 4px"><span style="font-weight:500">SPY</span> <span style="font-size:11px">S&amp;P 500</span></td><td style="text-align:right;padding:6px 4px">'+s.price.toFixed(2)+'</td><td style="text-align:right;padding:6px 4px;color:'+(s.d1>0?POS:NEG)+'">'+sign(s.d1)+'</td><td style="text-align:right;padding:6px 4px">0.0%</td><td style="text-align:right;padding:6px 4px">0.0%</td><td style="text-align:right;padding:6px 4px">0.0%</td><td style="text-align:right;padding:6px 4px">100.00</td><td style="text-align:right;padding:6px 4px">100.00</td><td style="text-align:right;padding:6px 4px"><span style="background:'+GRAY+'26;color:'+GRAY+';font-size:11px;padding:2px 8px;border-radius:999px">Benchmark</span></td><td></td></tr>';})();
+}
+function setTf(v){tf=v;end=SD().dates.length-1;
+ $('tfW').style.background=v==='weekly'?'var(--color-background-secondary)':'transparent';
+ $('tfW').style.fontWeight=v==='weekly'?'500':'400';
+ $('tfD').style.background=v==='daily'?'var(--color-background-secondary)':'transparent';
+ $('tfD').style.fontWeight=v==='daily'?'500':'400';
+ render();}
+function setEx(v){exKey=v;document.querySelectorAll('[data-ex]').forEach(b=>{b.style.background=b.dataset.ex===v?'var(--color-background-secondary)':'transparent';b.style.fontWeight=b.dataset.ex===v?'500':'400';});money();}
+$('tfW').addEventListener('click',()=>setTf('weekly'));
+$('tfD').addEventListener('click',()=>setTf('daily'));
+document.querySelectorAll('[data-ex]').forEach(b=>b.addEventListener('click',()=>setEx(b.dataset.ex)));
+$('tail').addEventListener('input',e=>{tail=+e.target.value;$('tailOut').textContent=tail;render();});
+$('scrub').addEventListener('input',e=>{end=+e.target.value;render();});
+$('play').addEventListener('click',()=>{playing=!playing;$('play').textContent=playing?'Pause':'Play';
+ if(playing){timer=setInterval(()=>{const n=SD().dates.length;end=end>=n-1?Math.max(2,tail):end+1;render();},550);}else clearInterval(timer);});
+$('chips').addEventListener('click',e=>{const el=e.target.closest('[data-chip]');if(!el)return;const t=el.dataset.chip;
+ if(t==='__all')hidden.clear();else hidden.has(t)?hidden.delete(t):hidden.add(t);render();});
+$('hdr').addEventListener('click',e=>{const th=e.target.closest('[data-sort]');if(!th)return;const k=th.dataset.sort;
+ if(sort.key===k)sort.dir*=-1;else{sort.key=k;sort.dir=1;}table();});
+const tip=$('tip'),wrap=$('wrap');
+$('rrg').addEventListener('mousemove',e=>{const el=e.target.closest('[data-sym]');if(!el){tip.style.display='none';return;}
+ const t=el.dataset.sym,st=DATA.stats[t],c=cur(t),q=quad(c.r,c.m);
+ tip.innerHTML='<div style="font-weight:500;font-size:13px;margin-bottom:2px">'+t+' · '+st.name+'</div><div style="font-size:12px;color:var(--color-text-secondary)">$'+st.price.toFixed(2)+' · day '+sign(st.d1)+'<br>vs SPY: 1W '+sign(st.ex1w)+' · 1M '+sign(st.ex1m)+'<br>RS-Ratio '+c.r.toFixed(2)+' · RS-Mom '+c.m.toFixed(2)+'<br><span style="color:'+QC[q]+'">'+q+'</span> · '+SD().dates[end]+'</div>';
+ const r=wrap.getBoundingClientRect();let x=e.clientX-r.left+14,y=e.clientY-r.top+10;
+ if(x>r.width-210)x-=225;if(y>r.height-120)y-=130;
+ tip.style.left=x+'px';tip.style.top=y+'px';tip.style.display='block';});
+$('rrg').addEventListener('mouseleave',()=>tip.style.display='none');
+
+/* ---------- LIVE SIGNALS (always computed from data) ---------- */
+const TAGCOL=t=>(t==='Buy'||t==='Accumulate')?POS:(t==='Trim'||t==='Avoid')?NEG:QC.Weakening;
+function classify(t){
+ const dd=DATA.daily.series[t],i=dd.ratio.length-1;
+ const r=dd.ratio[i],m=dd.mom[i],q=quad(r,m);
+ const k=Math.max(0,i-3);
+ const momUp=m>dd.mom[k],flow=DATA.stats[t].ex1m,ytd=DATA.stats[t].ytd;
+ let tag,why,rank;
+ if(q==='Leading'){
+   if(momUp||flow>0){tag='Buy';rank=0;why='Leading — strong relative strength'+(flow>0?', money flowing in (1M '+sign(flow)+' vs SPY)':'')+(ytd>20?'. Extended YTD '+ytd.toFixed(0)+'% — size carefully':'');}
+   else{tag='Hold';rank=2;why='Leading but momentum easing — let it prove it holds';}
+ }else if(q==='Improving'){
+   if(momUp&&flow>-3){tag='Accumulate';rank=1;why='Improving, momentum rising'+(flow>0?', flow positive ('+sign(flow)+')':', flow turning up');}
+   else{tag='Watch';rank=3;why='Improving but '+(momUp?'still bleeding money ('+sign(flow)+') — wait for flow to confirm':'momentum flattening');}
+ }else if(q==='Weakening'){
+   tag='Trim';rank=4;why='Leadership rolling over — high RS but momentum turning down';
+ }else{
+   tag=momUp?'Watch':'Avoid';rank=momUp?3:5;
+   why=momUp?'Lagging but trying to base — not yet':'Lagging with weak flow ('+sign(flow)+')';
+ }
+ return {t,name:DATA.stats[t].name,tag,why,rank,flow};
+}
+function signals(){
+ const rows=ORDER.map(classify).sort((a,b)=>a.rank-b.rank||b.flow-a.flow);
+ $('signals').innerHTML='<div style="font-size:11px;color:var(--color-text-secondary);margin:0 0 8px">Live read from the rotation graph + 1-month money flow — recomputes on every data refresh.</div>'
+  +rows.map(o=>'<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)">'
+   +'<span style="flex:none;width:78px"><span style="background:'+TAGCOL(o.tag)+'26;color:'+TAGCOL(o.tag)+';font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px">'+o.tag+'</span></span>'
+   +'<span style="flex:none;width:150px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><b>'+o.t+'</b> <span style="color:var(--color-text-secondary)">'+o.name+'</span></span>'
+   +'<span style="flex:1;font-size:12px;color:var(--color-text-secondary)">'+o.why+'</span></div>').join('');
+}
+
+/* ---------- RESEARCHED NOTE (today + next week) ---------- */
+function renderNote(){
+ const c=DATA.commentary;
+ if(!c){$('note').innerHTML='<div class="card" style="padding:12px 14px;font-size:12px;color:var(--color-text-secondary)">Strategist note for today &amp; next week not generated yet.</div>';return;}
+ const li=(arr,fn)=>arr&&arr.length?arr.map(fn).join(''):'';
+ const head=(txt,col)=>'<div style="font-size:12px;font-weight:500;color:'+(col||'var(--color-text-primary)')+';margin:12px 0 5px">'+txt+'</div>';
+ let h='<div class="card" style="padding:14px 16px">';
+ h+='<div style="font-size:11px;color:var(--color-text-secondary);margin:0 0 8px">Strategist note · as of '+(c.asof||DATA.asof)+'</div>';
+ if(c.today_remarks){h+=head('Today');h+='<div style="font-size:13px;line-height:1.5">'+c.today_remarks+'</div>';}
+ if(c.next_week){h+=head('Next week');h+='<div style="font-size:13px;line-height:1.5">'+c.next_week+'</div>';}
+ if(c.catalysts&&c.catalysts.length){h+=head('Catalysts ahead');h+='<div style="font-size:12.5px;line-height:1.6">'+li(c.catalysts,e=>'<div>· <b>'+e.date+'</b> — '+e.event+' <span style="color:var(--color-text-secondary)">('+e.why+')</span></div>')+'</div>';}
+ if(c.buy_ideas&&c.buy_ideas.length){h+=head('Good buys',POS);h+='<div style="font-size:12.5px;line-height:1.6">'+li(c.buy_ideas,e=>'<div style="margin-bottom:4px"><b style="color:'+POS+'">'+e.ticker+'</b> '+e.sector+' — '+e.rationale+' <span style="color:var(--color-text-secondary)">Risk: '+e.risk+'</span></div>')+'</div>';}
+ if(c.watch&&c.watch.length){h+=head('Watchlist',QC.Weakening);h+='<div style="font-size:12.5px;line-height:1.6">'+li(c.watch,e=>'<div><b>'+e.ticker+'</b> '+e.sector+' — '+e.note+'</div>')+'</div>';}
+ if(c.avoid&&c.avoid.length){h+=head('Avoid / reduce',NEG);h+='<div style="font-size:12.5px;line-height:1.6">'+li(c.avoid,e=>'<div><b style="color:'+NEG+'">'+e.ticker+'</b> '+e.sector+' — '+e.reason+'</div>')+'</div>';}
+ if(c.risks&&c.risks.length){h+=head('Risks');h+='<div style="font-size:12.5px;line-height:1.6;color:var(--color-text-secondary)">'+li(c.risks,e=>'<div>· '+e+'</div>')+'</div>';}
+ if(c.bottom_line){h+='<div style="font-size:13px;font-weight:500;margin:12px 0 0;padding:10px 12px;background:var(--color-background-secondary);border-radius:8px">'+c.bottom_line+'</div>';}
+ if(c.disclaimer){h+='<div style="font-size:11px;color:var(--color-text-secondary);margin:10px 0 0;line-height:1.45">'+c.disclaimer+'</div>';}
+ h+='</div>';
+ $('note').innerHTML=h;
+}
+
+function draw(){setSub();setEx(exKey);render();signals();renderNote();}
+draw();
+setTf('weekly');
+
+// ---------- live polling ----------
+if(LIVE){
+  setInterval(async()=>{
+    try{
+      const r=await fetch('data.json',{cache:'no-store'});
+      if(!r.ok)return;
+      const fresh=await r.json();
+      const atEnd=end===SD().dates.length-1;   // keep following latest unless user scrubbed back
+      DATA=fresh;
+      if(atEnd)end=SD().dates.length-1;
+      draw();
+    }catch(e){}
+  },60000);
+}
+</script>
+</body>
+</html>
