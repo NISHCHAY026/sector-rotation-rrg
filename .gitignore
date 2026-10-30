@@ -8,3 +8,12 @@ venv/
 # OS
 Thumbs.db
 .DS_Store
+
+# Secrets: keys, certificates, browser cookie exports, local env files
+.env
+.env.local
+*.pem
+*.key
+*.p12
+*.pfx
+cookies*.txt
